@@ -1,4 +1,6 @@
-const STORAGE_KEY = "gym-progress-data-v1";
+const STORAGE_KEY = "gym-progress-data-v2";
+const LEGACY_STORAGE_KEY = "gym-progress-data-v1";
+const THEME_KEY = "gym-progress-theme";
 
 let state = loadState();
 let editingExerciseId = null;
@@ -8,6 +10,7 @@ const pages = document.querySelectorAll(".page");
 const exerciseForm = document.getElementById("exerciseForm");
 const exerciseName = document.getElementById("exerciseName");
 const exerciseKg = document.getElementById("exerciseKg");
+const exerciseReps = document.getElementById("exerciseReps");
 const setupList = document.getElementById("setupList");
 const workoutList = document.getElementById("workoutList");
 const setupEmpty = document.getElementById("setupEmpty");
@@ -16,10 +19,12 @@ const exerciseCount = document.getElementById("exerciseCount");
 const editModal = document.getElementById("editModal");
 const modalTitle = document.getElementById("modalTitle");
 const modalKg = document.getElementById("modalKg");
+const modalReps = document.getElementById("modalReps");
 const confirmKgBtn = document.getElementById("confirmKgBtn");
 const saveWorkoutBtn = document.getElementById("saveWorkoutBtn");
 const historyList = document.getElementById("historyList");
 const resetBtn = document.getElementById("resetBtn");
+const themeToggle = document.getElementById("themeToggle");
 const toast = document.getElementById("toast");
 
 document.getElementById("workoutDate").textContent = new Intl.DateTimeFormat("it-IT", {
@@ -27,6 +32,8 @@ document.getElementById("workoutDate").textContent = new Intl.DateTimeFormat("it
   day: "numeric",
   month: "long"
 }).format(new Date());
+
+applySavedTheme();
 
 tabs.forEach(tab => {
   tab.addEventListener("click", () => {
@@ -42,13 +49,15 @@ exerciseForm.addEventListener("submit", event => {
 
   const name = exerciseName.value.trim();
   const kg = Number(exerciseKg.value);
+  const reps = Number(exerciseReps.value);
 
-  if (!name || Number.isNaN(kg) || kg < 0) return;
+  if (!name || Number.isNaN(kg) || kg < 0 || Number.isNaN(reps) || reps < 1) return;
 
   state.exercises.push({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     name,
-    kg
+    kg,
+    reps
   });
 
   saveState();
@@ -69,17 +78,24 @@ document.addEventListener("click", event => {
 });
 
 confirmKgBtn.addEventListener("click", () => {
-  const value = Number(modalKg.value);
-  if (Number.isNaN(value) || value < 0 || !editingExerciseId) return;
+  const kg = Number(modalKg.value);
+  const reps = Number(modalReps.value);
+
+  if (
+    Number.isNaN(kg) || kg < 0 ||
+    Number.isNaN(reps) || reps < 1 ||
+    !editingExerciseId
+  ) return;
 
   const exercise = state.exercises.find(item => item.id === editingExerciseId);
   if (!exercise) return;
 
-  exercise.kg = value;
+  exercise.kg = kg;
+  exercise.reps = reps;
   saveState();
   closeEditModal();
   render();
-  showToast("Carico aggiornato");
+  showToast("Esercizio aggiornato");
 });
 
 saveWorkoutBtn.addEventListener("click", () => {
@@ -93,7 +109,8 @@ saveWorkoutBtn.addEventListener("click", () => {
     date: new Date().toISOString(),
     exercises: state.exercises.map(item => ({
       name: item.name,
-      kg: item.kg
+      kg: item.kg,
+      reps: item.reps
     }))
   });
 
@@ -104,14 +121,39 @@ saveWorkoutBtn.addEventListener("click", () => {
 });
 
 resetBtn.addEventListener("click", () => {
-  const confirmed = window.confirm("Vuoi cancellare tutti gli esercizi e lo storico?");
+  const confirmed = window.confirm(
+    "Vuoi cancellare tutti gli esercizi, i pesi, le ripetizioni e lo storico?"
+  );
   if (!confirmed) return;
 
   state = { exercises: [], history: [] };
   saveState();
   render();
-  showToast("Dati cancellati");
+  showToast("Scheda azzerata");
 });
+
+themeToggle.addEventListener("click", () => {
+  const dark = document.body.classList.toggle("dark-mode");
+  localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  updateThemeButton(dark);
+});
+
+function applySavedTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  const dark = saved ? saved === "dark" : prefersDark;
+
+  document.body.classList.toggle("dark-mode", dark);
+  updateThemeButton(dark);
+}
+
+function updateThemeButton(dark) {
+  themeToggle.textContent = dark ? "☀️" : "🌙";
+  themeToggle.setAttribute(
+    "aria-label",
+    dark ? "Attiva modalità chiara" : "Attiva modalità scura"
+  );
+}
 
 function openEditModal(id) {
   const exercise = state.exercises.find(item => item.id === id);
@@ -120,6 +162,7 @@ function openEditModal(id) {
   editingExerciseId = id;
   modalTitle.textContent = exercise.name;
   modalKg.value = exercise.kg;
+  modalReps.value = exercise.reps ?? 1;
   editModal.classList.remove("hidden");
   setTimeout(() => modalKg.select(), 50);
 }
@@ -166,7 +209,9 @@ function createExerciseRow(exercise, allowDelete) {
   row.innerHTML = `
     <div class="exercise-main">
       <div class="exercise-name">${escapeHtml(exercise.name)}</div>
-      <div class="exercise-weight">${formatKg(exercise.kg)} kg</div>
+      <div class="exercise-weight">
+        ${formatKg(exercise.kg)} kg · ${Number(exercise.reps ?? 1)} ripetizioni
+      </div>
     </div>
     <div class="exercise-actions">
       <button class="edit-button" data-edit-id="${exercise.id}" aria-label="Modifica ${escapeHtml(exercise.name)}">
@@ -198,7 +243,9 @@ function renderHistory() {
     }).format(new Date(workout.date));
 
     const summary = workout.exercises
-      .map(exercise => `${escapeHtml(exercise.name)}: ${formatKg(exercise.kg)} kg`)
+      .map(exercise =>
+        `${escapeHtml(exercise.name)}: ${formatKg(exercise.kg)} kg × ${Number(exercise.reps ?? 1)}`
+      )
       .join("<br>");
 
     item.innerHTML = `
@@ -212,8 +259,30 @@ function renderHistory() {
 
 function loadState() {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    let raw = localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    }
+
+    const stored = raw ? JSON.parse(raw) : null;
+
     if (stored && Array.isArray(stored.exercises) && Array.isArray(stored.history)) {
+      stored.exercises = stored.exercises.map(item => ({
+        ...item,
+        reps: Number(item.reps ?? 1)
+      }));
+
+      stored.history = stored.history.map(workout => ({
+        ...workout,
+        exercises: Array.isArray(workout.exercises)
+          ? workout.exercises.map(item => ({
+              ...item,
+              reps: Number(item.reps ?? 1)
+            }))
+          : []
+      }));
+
       return stored;
     }
   } catch (error) {

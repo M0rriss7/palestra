@@ -19,7 +19,10 @@
         <p class="eyebrow">I tuoi allenamenti</p>
         <h1>Gym Progress</h1>
       </div>
-      <button id="resetBtn" class="reset-button" aria-label="Resetta la scheda">Resetta scheda</button>
+      <div class="header-actions">
+        <button id="themeToggle" class="theme-button" aria-label="Attiva modalità scura">🌙</button>
+        <button id="resetBtn" class="reset-button" aria-label="Resetta la scheda">Resetta scheda</button>
+      </div>
     </header>
 
     <nav class="tabs" aria-label="Navigazione">
@@ -38,13 +41,22 @@
           Nome esercizio
           <input id="exerciseName" type="text" placeholder="Es. Hip Thrust" required maxlength="60" />
         </label>
-        <label>
-          Carico iniziale
-          <div class="input-with-unit">
-            <input id="exerciseKg" type="number" min="0" step="0.5" placeholder="0" required />
-            <span>kg</span>
-          </div>
-        </label>
+        <div class="form-grid">
+          <label>
+            Carico iniziale
+            <div class="input-with-unit">
+              <input id="exerciseKg" type="number" min="0" step="0.5" placeholder="0" required />
+              <span>kg</span>
+            </div>
+          </label>
+          <label>
+            Ripetizioni
+            <div class="input-with-unit">
+              <input id="exerciseReps" type="number" min="1" step="1" placeholder="1" value="1" required />
+              <span>rep</span>
+            </div>
+          </label>
+        </div>
         <button class="primary-button" type="submit">Aggiungi esercizio</button>
       </form>
 
@@ -90,13 +102,22 @@
       <button class="modal-close" data-close-modal aria-label="Chiudi">×</button>
       <p class="eyebrow">Modifica carico</p>
       <h2 id="modalTitle">Esercizio</h2>
-      <label>
-        Nuovo carico
-        <div class="input-with-unit">
-          <input id="modalKg" type="number" min="0" step="0.5" />
-          <span>kg</span>
-        </div>
-      </label>
+      <div class="form-grid">
+        <label>
+          Nuovo carico
+          <div class="input-with-unit">
+            <input id="modalKg" type="number" min="0" step="0.5" />
+            <span>kg</span>
+          </div>
+        </label>
+        <label>
+          Ripetizioni
+          <div class="input-with-unit">
+            <input id="modalReps" type="number" min="1" step="1" />
+            <span>rep</span>
+          </div>
+        </label>
+      </div>
       <button id="confirmKgBtn" class="primary-button">Salva modifica</button>
     </div>
   </div>
