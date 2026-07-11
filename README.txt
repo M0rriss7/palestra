@@ -1,19 +1,21 @@
-GYM PROGRESS
+GYM PROGRESS V2
 
-File inclusi:
-- index.html
-- style.css
-- app.js
-- manifest.json
-- service-worker.js
-- icon.svg
+Funzioni:
+- Schede separate per Lunedì, Martedì, Giovedì e Venerdì
+- Kg, serie e ripetizioni modificabili
+- Note facoltative
+- Checkbox completamento esercizi
+- Salvataggio sessione
+- Storico per esercizio
+- Grafico carichi
+- Record personale
+- Reset singolo giorno o totale
+- Modalità chiara/scura
+- Funzionamento offline tramite service worker
 
-COME PROVARLA
-Apri index.html con un browser sul computer.
-
-COME METTERLA SU IPHONE
-Per usarla come vera web app, pubblica l'intera cartella su un servizio HTTPS
-come GitHub Pages, Netlify o Vercel. Poi apri il link con Safari su iPhone e usa:
-Condividi > Aggiungi alla schermata Home.
-
-I dati vengono salvati localmente nel browser del dispositivo.
+COME AGGIORNARE GITHUB
+1. Estrai lo ZIP.
+2. Nel repository: Add file > Upload files.
+3. Carica tutti i file sostituendo quelli esistenti.
+4. Premi Commit changes.
+5. Attendi il deploy GitHub Pages.
