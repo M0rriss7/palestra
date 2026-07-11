@@ -1,0 +1,17 @@
+{
+  "name": "Gym Progress",
+  "short_name": "Gym Progress",
+  "description": "Web app privata per monitorare i carichi in palestra.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f4f2",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

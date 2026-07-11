@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Gym Progress" />
+  <title>Gym Progress</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">I tuoi allenamenti</p>
+        <h1>Gym Progress</h1>
+      </div>
+      <button id="resetBtn" class="reset-button" aria-label="Resetta la scheda">Resetta scheda</button>
+    </header>
+
+    <nav class="tabs" aria-label="Navigazione">
+      <button class="tab active" data-page="setupPage">Esercizi</button>
+      <button class="tab" data-page="workoutPage">Allenamento</button>
+    </nav>
+
+    <section id="setupPage" class="page active">
+      <div class="card intro-card">
+        <h2>Crea la tua scheda</h2>
+        <p>Inserisci il nome dell’esercizio e il carico iniziale in kg.</p>
+      </div>
+
+      <form id="exerciseForm" class="card form-card">
+        <label>
+          Nome esercizio
+          <input id="exerciseName" type="text" placeholder="Es. Hip Thrust" required maxlength="60" />
+        </label>
+        <label>
+          Carico iniziale
+          <div class="input-with-unit">
+            <input id="exerciseKg" type="number" min="0" step="0.5" placeholder="0" required />
+            <span>kg</span>
+          </div>
+        </label>
+        <button class="primary-button" type="submit">Aggiungi esercizio</button>
+      </form>
+
+      <div class="section-heading">
+        <h2>I tuoi esercizi</h2>
+        <span id="exerciseCount" class="count-badge">0</span>
+      </div>
+      <div id="setupList" class="exercise-list"></div>
+      <div id="setupEmpty" class="empty-state">
+        <div class="empty-icon">＋</div>
+        <p>Non hai ancora inserito esercizi.</p>
+      </div>
+    </section>
+
+    <section id="workoutPage" class="page">
+      <div class="card workout-header">
+        <div>
+          <p class="eyebrow">Sessione corrente</p>
+          <h2 id="workoutDate"></h2>
+        </div>
+        <button id="saveWorkoutBtn" class="primary-button compact">Salva allenamento</button>
+      </div>
+
+      <div class="section-heading">
+        <h2>Aggiorna i carichi</h2>
+      </div>
+      <div id="workoutList" class="exercise-list"></div>
+      <div id="workoutEmpty" class="empty-state">
+        <div class="empty-icon">🏋️</div>
+        <p>Aggiungi prima gli esercizi nella pagina “Esercizi”.</p>
+      </div>
+
+      <div class="section-heading history-heading">
+        <h2>Ultimi allenamenti</h2>
+      </div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <div id="editModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-card">
+      <button class="modal-close" data-close-modal aria-label="Chiudi">×</button>
+      <p class="eyebrow">Modifica carico</p>
+      <h2 id="modalTitle">Esercizio</h2>
+      <label>
+        Nuovo carico
+        <div class="input-with-unit">
+          <input id="modalKg" type="number" min="0" step="0.5" />
+          <span>kg</span>
+        </div>
+      </label>
+      <button id="confirmKgBtn" class="primary-button">Salva modifica</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
