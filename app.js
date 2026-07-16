@@ -1,10 +1,17 @@
-const STORAGE_KEY = "gym-progress-v2-data";
+const STORAGE_KEY = "gym-progress-v3-data";
 const THEME_KEY = "gym-progress-v2-theme";
-const DAYS = [
-  { id: "monday", label: "Lunedì" },
-  { id: "tuesday", label: "Martedì" },
-  { id: "thursday", label: "Giovedì" },
-  { id: "friday", label: "Venerdì" }
+
+const SCHEDA_IDS = ["scheda-1", "scheda-2", "scheda-3", "scheda-4"];
+const DEFAULT_LABELS = {
+  "scheda-1": "Scheda 1",
+  "scheda-2": "Scheda 2",
+  "scheda-3": "Scheda 3",
+  "scheda-4": "Scheda 4"
+};
+
+const MUSCLE_GROUPS = [
+  "Petto", "Schiena", "Spalle", "Bicipiti", "Tricipiti", "Avambracci",
+  "Addominali", "Quadricipiti", "Femorali", "Glutei", "Polpacci", "Cardio/Altro"
 ];
 
 let state = loadState();
@@ -15,15 +22,16 @@ const $ = id => document.getElementById(id);
 
 const homeView = $("homeView");
 const dayView = $("dayView");
+const groupsView = $("groupsView");
 const dayGrid = $("dayGrid");
 const exerciseList = $("exerciseList");
 const emptyState = $("emptyState");
 const exerciseModal = $("exerciseModal");
-const historyModal = $("historyModal");
 const settingsModal = $("settingsModal");
 const exerciseForm = $("exerciseForm");
 const toast = $("toast");
 
+populateGroupSelect();
 applyTheme();
 renderHome();
 
@@ -33,6 +41,9 @@ $("dayMenuBtn").addEventListener("click", () => openSettings(true));
 $("backBtn").addEventListener("click", showHome);
 $("addExerciseBtn").addEventListener("click", () => openExerciseModal());
 $("saveSessionBtn").addEventListener("click", saveSession);
+$("renameSchedaBtn").addEventListener("click", renameCurrentScheda);
+$("groupsBtn").addEventListener("click", openGroups);
+$("groupsBackBtn").addEventListener("click", showHome);
 
 exerciseForm.addEventListener("submit", saveExercise);
 
@@ -40,27 +51,29 @@ document.addEventListener("click", event => {
   const dayButton = event.target.closest("[data-day-id]");
   const toggleButton = event.target.closest("[data-toggle-id]");
   const editButton = event.target.closest("[data-edit-id]");
-  const historyButton = event.target.closest("[data-history-id]");
   const deleteButton = event.target.closest("[data-delete-id]");
 
   if (dayButton) openDay(dayButton.dataset.dayId);
   if (toggleButton) toggleExercise(toggleButton.dataset.toggleId);
   if (editButton) openExerciseModal(editButton.dataset.editId);
-  if (historyButton) openHistory(historyButton.dataset.historyId);
   if (deleteButton) deleteExercise(deleteButton.dataset.deleteId);
 
   if (event.target.closest("[data-close-exercise]")) closeExerciseModal();
-  if (event.target.closest("[data-close-history]")) closeHistoryModal();
   if (event.target.closest("[data-close-settings]")) closeSettings();
 });
 
 $("resetCurrentDayBtn").addEventListener("click", resetCurrentDay);
 $("resetAllBtn").addEventListener("click", resetAll);
 
+function populateGroupSelect() {
+  const select = $("exerciseGroup");
+  select.innerHTML = MUSCLE_GROUPS.map(group => `<option value="${group}">${group}</option>`).join("");
+}
+
 function defaultState() {
   return {
-    days: Object.fromEntries(
-      DAYS.map(day => [day.id, { exercises: [], sessions: [], completedThisWeek: false }])
+    schede: Object.fromEntries(
+      SCHEDA_IDS.map(id => [id, { label: DEFAULT_LABELS[id], exercises: [], sessions: [] }])
     )
   };
 }
@@ -68,10 +81,10 @@ function defaultState() {
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (parsed?.days) {
-      DAYS.forEach(day => {
-        if (!parsed.days[day.id]) {
-          parsed.days[day.id] = { exercises: [], sessions: [], completedThisWeek: false };
+    if (parsed?.schede) {
+      SCHEDA_IDS.forEach(id => {
+        if (!parsed.schede[id]) {
+          parsed.schede[id] = { label: DEFAULT_LABELS[id], exercises: [], sessions: [] };
         }
       });
       return parsed;
@@ -86,68 +99,130 @@ function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function getWeekStart(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function isCompletedThisWeek(sessions) {
+  if (!sessions?.length) return false;
+  const weekStart = getWeekStart();
+  return sessions.some(session => new Date(session.date) >= weekStart);
+}
+
+function lastSessionDate(sessions) {
+  if (!sessions?.length) return null;
+  return sessions[0].date;
+}
+
 function renderHome() {
   dayGrid.innerHTML = "";
 
-  DAYS.forEach((day, index) => {
-    const data = state.days[day.id];
+  SCHEDA_IDS.forEach((id, index) => {
+    const data = state.schede[id];
     const exerciseCount = data.exercises.length;
-    const completed = data.completedThisWeek;
+    const completed = isCompletedThisWeek(data.sessions);
+    const lastDate = lastSessionDate(data.sessions);
 
     const button = document.createElement("button");
     button.className = `day-card ${completed ? "completed" : ""}`;
-    button.dataset.dayId = day.id;
+    button.dataset.dayId = id;
     button.innerHTML = `
       <div class="day-card-top">
         <span class="day-index">${completed ? "✓" : String(index + 1).padStart(2, "0")}</span>
-        <span class="day-status">${completed ? "Completato" : `${exerciseCount} esercizi`}</span>
+        <span class="day-status">${completed ? "Svolta questa settimana" : `${exerciseCount} esercizi`}</span>
       </div>
-      <h2>${day.label}</h2>
-      <p>${exerciseCount ? "Apri la scheda e aggiorna i carichi" : "Crea la tua scheda"}</p>
+      <h2>${escapeHtml(data.label)}</h2>
+      <p>${lastDate ? `Ultima: ${formatDate(lastDate)}` : (exerciseCount ? "Apri la scheda e aggiorna gli esercizi" : "Crea la tua scheda")}</p>
     `;
     dayGrid.appendChild(button);
   });
 
-  const completedDays = DAYS.filter(day => state.days[day.id].completedThisWeek).length;
-  $("weekProgress").textContent = `${completedDays}/4 completati`;
-  $("totalExercises").textContent = DAYS.reduce((sum, day) => sum + state.days[day.id].exercises.length, 0);
-  $("totalSessions").textContent = DAYS.reduce((sum, day) => sum + state.days[day.id].sessions.length, 0);
-  $("totalPRs").textContent = countPRs();
+  const completedSchede = SCHEDA_IDS.filter(id => isCompletedThisWeek(state.schede[id].sessions)).length;
+  $("weekProgress").textContent = `${completedSchede}/4 completate`;
+  $("totalExercises").textContent = SCHEDA_IDS.reduce((sum, id) => sum + state.schede[id].exercises.length, 0);
+  $("totalSessions").textContent = SCHEDA_IDS.reduce((sum, id) => sum + state.schede[id].sessions.length, 0);
+  $("totalGroups").textContent = countActiveGroups();
 }
 
-function countPRs() {
-  let total = 0;
-  DAYS.forEach(day => {
-    state.days[day.id].exercises.forEach(exercise => {
-      if (exercise.history?.length > 1) {
-        const values = exercise.history.map(item => Number(item.kg));
-        const max = Math.max(...values);
-        if (Number(exercise.kg) >= max) total += 1;
-      }
-    });
+function countActiveGroups() {
+  const groups = new Set();
+  SCHEDA_IDS.forEach(id => {
+    state.schede[id].exercises.forEach(ex => groups.add(ex.muscleGroup));
   });
-  return total;
+  return groups.size;
 }
 
 function openDay(dayId) {
   currentDayId = dayId;
   homeView.classList.remove("active");
+  groupsView.classList.remove("active");
   dayView.classList.add("active");
-  $("currentDayTitle").textContent = DAYS.find(day => day.id === dayId).label;
+  $("currentDayTitle").textContent = currentDay().label;
+  $("currentDayDate").textContent = "Scheda";
   renderDay();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function openGroups() {
+  homeView.classList.remove("active");
+  dayView.classList.remove("active");
+  groupsView.classList.add("active");
+  renderGroups();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function renderGroups() {
+  const counts = Object.fromEntries(MUSCLE_GROUPS.map(group => [group, 0]));
+  SCHEDA_IDS.forEach(id => {
+    state.schede[id].exercises.forEach(ex => {
+      if (counts[ex.muscleGroup] !== undefined) counts[ex.muscleGroup] += 1;
+    });
+  });
+
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const max = Math.max(1, ...entries.map(entry => entry[1]));
+
+  $("groupsList").innerHTML = entries.map(([group, count]) => `
+    <div class="group-row">
+      <span class="group-label">${escapeHtml(group)}</span>
+      <div class="group-bar-track">
+        <div class="group-bar-fill" style="width:${(count / max) * 100}%"></div>
+      </div>
+      <span class="group-count">${String(count).padStart(2, "0")}</span>
+    </div>
+  `).join("");
 }
 
 function showHome() {
   currentDayId = null;
   dayView.classList.remove("active");
+  groupsView.classList.remove("active");
   homeView.classList.add("active");
   renderHome();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function currentDay() {
-  return state.days[currentDayId];
+  return state.schede[currentDayId];
+}
+
+function renameCurrentScheda() {
+  if (!currentDayId) return;
+  const current = currentDay();
+  const input = prompt("Nome della scheda", current.label);
+  if (input === null) return;
+  const trimmed = input.trim();
+  if (!trimmed) return;
+
+  current.label = trimmed.slice(0, 40);
+  saveState();
+  $("currentDayTitle").textContent = current.label;
+  showToast("Scheda rinominata");
 }
 
 function renderDay() {
@@ -158,11 +233,6 @@ function renderDay() {
     const card = document.createElement("article");
     card.className = `exercise-card ${exercise.completed ? "done" : ""}`;
 
-    const maxHistory = exercise.history?.length
-      ? Math.max(...exercise.history.map(item => Number(item.kg)))
-      : Number(exercise.kg);
-    const isPR = exercise.history?.length > 1 && Number(exercise.kg) >= maxHistory;
-
     card.innerHTML = `
       <div class="exercise-top">
         <div class="exercise-title">
@@ -170,18 +240,17 @@ function renderDay() {
           <div>
             <div class="exercise-name">${escapeHtml(exercise.name)}</div>
             <div class="exercise-meta">
-              ${formatKg(exercise.kg)} kg · ${exercise.sets} serie · ${exercise.reps} rip.
+              ${exercise.sets} serie · ${escapeHtml(exercise.reps)} rip.
             </div>
           </div>
         </div>
-        ${isPR ? `<span class="pr-badge">🏆 PR</span>` : ""}
+        <span class="group-badge">${escapeHtml(exercise.muscleGroup)}</span>
       </div>
 
       ${exercise.notes ? `<div class="exercise-notes">${escapeHtml(exercise.notes)}</div>` : ""}
 
       <div class="exercise-actions">
         <button class="action-button primary" data-edit-id="${exercise.id}">Modifica</button>
-        <button class="action-button" data-history-id="${exercise.id}">Storico</button>
         <button class="action-button danger" data-delete-id="${exercise.id}">Elimina</button>
       </div>
     `;
@@ -191,13 +260,10 @@ function renderDay() {
 
   const total = day.exercises.length;
   const completed = day.exercises.filter(ex => ex.completed).length;
-  const volume = day.exercises.reduce(
-    (sum, ex) => sum + Number(ex.kg) * Number(ex.sets) * Number(ex.reps),
-    0
-  );
+  const totalSets = day.exercises.reduce((sum, ex) => sum + Number(ex.sets), 0);
 
   $("completedCount").textContent = `${completed}/${total}`;
-  $("dayVolume").textContent = `${formatKg(volume)} kg`;
+  $("dayVolume").textContent = String(totalSets);
   emptyState.classList.toggle("hidden", total > 0);
 
   const allDone = total > 0 && completed === total;
@@ -213,11 +279,10 @@ function openExerciseModal(exerciseId = null) {
   $("exerciseModalEyebrow").textContent = exercise ? "Modifica esercizio" : "Nuovo esercizio";
   $("exerciseModalTitle").textContent = exercise ? exercise.name : "Aggiungi esercizio";
   $("exerciseName").value = exercise?.name ?? "";
-  $("exerciseKg").value = exercise?.kg ?? 0;
+  $("exerciseGroup").value = exercise?.muscleGroup ?? MUSCLE_GROUPS[0];
   $("exerciseSets").value = exercise?.sets ?? 1;
-  $("exerciseReps").value = exercise?.reps ?? 1;
+  $("exerciseReps").value = exercise?.reps ?? "";
   $("exerciseNotes").value = exercise?.notes ?? "";
-  $("saveToHistory").checked = true;
 
   exerciseModal.classList.remove("hidden");
   setTimeout(() => $("exerciseName").focus(), 80);
@@ -233,38 +298,28 @@ function saveExercise(event) {
   event.preventDefault();
 
   const name = $("exerciseName").value.trim();
-  const kg = Number($("exerciseKg").value);
+  const muscleGroup = $("exerciseGroup").value;
   const sets = Number($("exerciseSets").value);
-  const reps = Number($("exerciseReps").value);
+  const reps = $("exerciseReps").value.trim();
   const notes = $("exerciseNotes").value.trim();
-  const saveHistory = $("saveToHistory").checked;
 
-  if (!name || kg < 0 || sets < 1 || reps < 1) return;
+  if (!name || !reps || sets < 1) return;
 
   const day = currentDay();
-  const timestamp = new Date().toISOString();
 
   if (editingExerciseId) {
     const exercise = day.exercises.find(item => item.id === editingExerciseId);
-    const oldKg = Number(exercise.kg);
-
-    Object.assign(exercise, { name, kg, sets, reps, notes });
-
-    if (saveHistory && kg !== oldKg) {
-      exercise.history = exercise.history || [];
-      exercise.history.push({ date: timestamp, kg, sets, reps });
-    }
-    showToast(kg > oldKg ? "Nuovo carico salvato 🏆" : "Esercizio aggiornato");
+    Object.assign(exercise, { name, muscleGroup, sets, reps, notes });
+    showToast("Esercizio aggiornato");
   } else {
     day.exercises.push({
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       name,
-      kg,
+      muscleGroup,
       sets,
       reps,
       notes,
-      completed: false,
-      history: [{ date: timestamp, kg, sets, reps }]
+      completed: false
     });
     showToast("Esercizio aggiunto");
   }
@@ -306,7 +361,7 @@ function saveSession() {
     date: new Date().toISOString(),
     exercises: day.exercises.map(ex => ({
       name: ex.name,
-      kg: ex.kg,
+      muscleGroup: ex.muscleGroup,
       sets: ex.sets,
       reps: ex.reps,
       notes: ex.notes
@@ -315,106 +370,11 @@ function saveSession() {
 
   day.sessions.unshift(session);
   day.sessions = day.sessions.slice(0, 50);
-  day.completedThisWeek = true;
   day.exercises.forEach(ex => ex.completed = false);
 
   saveState();
   renderDay();
   showToast("Allenamento salvato");
-}
-
-function openHistory(id) {
-  const exercise = currentDay().exercises.find(item => item.id === id);
-  if (!exercise) return;
-
-  $("historyTitle").textContent = exercise.name;
-  const history = [...(exercise.history || [])].reverse();
-  const entries = $("historyEntries");
-
-  entries.innerHTML = history.length
-    ? history.map(item => `
-        <div class="history-entry">
-          <strong>${formatDate(item.date)}</strong>
-          <span>${formatKg(item.kg)} kg · ${item.sets}×${item.reps}</span>
-        </div>
-      `).join("")
-    : `<div class="empty-state"><p>Nessuno storico disponibile.</p></div>`;
-
-  historyModal.classList.remove("hidden");
-  drawChart(exercise.history || []);
-}
-
-function closeHistoryModal() {
-  historyModal.classList.add("hidden");
-}
-
-function drawChart(history) {
-  const canvas = $("historyChart");
-  const ctx = canvas.getContext("2d");
-  const ratio = window.devicePixelRatio || 1;
-  const cssWidth = canvas.clientWidth || 680;
-  const cssHeight = 220;
-
-  canvas.width = cssWidth * ratio;
-  canvas.height = cssHeight * ratio;
-  ctx.scale(ratio, ratio);
-  ctx.clearRect(0, 0, cssWidth, cssHeight);
-
-  const styles = getComputedStyle(document.body);
-  const muted = styles.getPropertyValue("--muted").trim();
-  const text = styles.getPropertyValue("--text").trim();
-  const line = styles.getPropertyValue("--line").trim();
-
-  if (!history.length) {
-    ctx.fillStyle = muted;
-    ctx.font = "14px -apple-system";
-    ctx.textAlign = "center";
-    ctx.fillText("Nessun dato", cssWidth / 2, cssHeight / 2);
-    return;
-  }
-
-  const values = history.map(item => Number(item.kg));
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const padding = 28;
-  const span = max - min || 1;
-
-  ctx.strokeStyle = line;
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 4; i++) {
-    const y = padding + ((cssHeight - padding * 2) / 3) * i;
-    ctx.beginPath();
-    ctx.moveTo(padding, y);
-    ctx.lineTo(cssWidth - padding, y);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = text;
-  ctx.lineWidth = 3;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-  ctx.beginPath();
-
-  values.forEach((value, index) => {
-    const x = values.length === 1
-      ? cssWidth / 2
-      : padding + (index / (values.length - 1)) * (cssWidth - padding * 2);
-    const y = cssHeight - padding - ((value - min) / span) * (cssHeight - padding * 2);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  ctx.fillStyle = text;
-  values.forEach((value, index) => {
-    const x = values.length === 1
-      ? cssWidth / 2
-      : padding + (index / (values.length - 1)) * (cssWidth - padding * 2);
-    const y = cssHeight - padding - ((value - min) / span) * (cssHeight - padding * 2);
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
 }
 
 function openSettings(fromDay) {
@@ -428,10 +388,10 @@ function closeSettings() {
 
 function resetCurrentDay() {
   if (!currentDayId) return;
-  const label = DAYS.find(day => day.id === currentDayId).label;
-  if (!confirm(`Vuoi cancellare tutta la scheda di ${label}?`)) return;
+  const label = currentDay().label;
+  if (!confirm(`Vuoi cancellare tutta la ${label}?`)) return;
 
-  state.days[currentDayId] = { exercises: [], sessions: [], completedThisWeek: false };
+  state.schede[currentDayId] = { label, exercises: [], sessions: [] };
   saveState();
   closeSettings();
   renderDay();
@@ -439,7 +399,7 @@ function resetCurrentDay() {
 }
 
 function resetAll() {
-  if (!confirm("Vuoi cancellare tutte le schede, gli esercizi e lo storico?")) return;
+  if (!confirm("Vuoi cancellare tutte le schede e gli esercizi?")) return;
 
   state = defaultState();
   saveState();
@@ -464,15 +424,10 @@ function toggleTheme() {
   $("themeToggle").textContent = dark ? "☀️" : "🌙";
 }
 
-function formatKg(value) {
-  return Number(value).toLocaleString("it-IT", { maximumFractionDigits: 2 });
-}
-
 function formatDate(value) {
   return new Intl.DateTimeFormat("it-IT", {
     day: "2-digit",
-    month: "short",
-    year: "numeric"
+    month: "short"
   }).format(new Date(value));
 }
 
@@ -494,6 +449,6 @@ function showToast(message) {
 
 if ("serviceWorker" in navigator) {
   addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js?v=20").catch(console.warn);
+    navigator.serviceWorker.register("service-worker.js?v=21").catch(console.warn);
   });
 }

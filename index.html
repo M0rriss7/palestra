@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f6f4" />
+  <meta name="theme-color" content="#f4f6f5" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Gym Progress" />
   <title>Gym Progress</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="style.css?v=20" />
+  <link rel="stylesheet" href="style.css?v=21" />
 </head>
 <body>
   <main class="app-shell">
@@ -20,6 +20,7 @@
         <h1>Gym Progress</h1>
       </div>
       <div class="top-actions">
+        <button id="groupsBtn" class="round-button" aria-label="Gruppi muscolari">▤</button>
         <button id="themeToggle" class="round-button" aria-label="Cambia tema">🌙</button>
         <button id="openSettingsBtn" class="round-button" aria-label="Impostazioni">•••</button>
       </div>
@@ -28,11 +29,11 @@
     <section id="homeView" class="view active">
       <div class="hero-card">
         <div>
-          <p class="eyebrow">La tua settimana</p>
+          <p class="eyebrow">Le tue schede</p>
           <h2>Scegli l’allenamento</h2>
-          <p>Ogni giorno conserva esercizi, carichi, note e storico separati.</p>
+          <p>Quattro schede personalizzabili, da svolgere quando vuoi durante la settimana.</p>
         </div>
-        <div id="weekProgress" class="week-progress">0/4 completati</div>
+        <div id="weekProgress" class="week-progress">0/4 completate</div>
       </div>
 
       <div id="dayGrid" class="day-grid"></div>
@@ -45,7 +46,7 @@
         <div class="summary-stats">
           <div><strong id="totalExercises">0</strong><span>Esercizi</span></div>
           <div><strong id="totalSessions">0</strong><span>Sessioni</span></div>
-          <div><strong id="totalPRs">0</strong><span>Record</span></div>
+          <div><strong id="totalGroups">0</strong><span>Gruppi</span></div>
         </div>
       </section>
     </section>
@@ -54,9 +55,10 @@
       <div class="day-header">
         <button id="backBtn" class="back-button">‹</button>
         <div class="day-title-wrap">
-          <p class="eyebrow">Scheda</p>
-          <h2 id="currentDayTitle">Lunedì</h2>
+          <p class="eyebrow" id="currentDayDate">Scheda</p>
+          <h2 id="currentDayTitle">Scheda 1</h2>
         </div>
+        <button id="renameSchedaBtn" class="round-button" aria-label="Rinomina scheda">✎</button>
         <button id="dayMenuBtn" class="round-button">•••</button>
       </div>
 
@@ -70,7 +72,7 @@
 
       <div class="day-stats">
         <div><span>Completati</span><strong id="completedCount">0/0</strong></div>
-        <div><span>Volume</span><strong id="dayVolume">0 kg</strong></div>
+        <div><span>Serie totali</span><strong id="dayVolume">0</strong></div>
       </div>
 
       <div id="exerciseList" class="exercise-list"></div>
@@ -82,6 +84,18 @@
 
       <button id="saveSessionBtn" class="save-session-button">Salva allenamento</button>
       <button id="addExerciseBtn" class="floating-add" aria-label="Aggiungi esercizio">＋</button>
+    </section>
+
+    <section id="groupsView" class="view">
+      <div class="day-header">
+        <button id="groupsBackBtn" class="back-button">‹</button>
+        <div class="day-title-wrap">
+          <p class="eyebrow">Distribuzione</p>
+          <h2>Gruppi muscolari</h2>
+        </div>
+      </div>
+      <p class="groups-hint">Numero di esercizi per gruppo, sommando tutte le schede.</p>
+      <div id="groupsList" class="groups-list"></div>
     </section>
   </main>
 
@@ -98,44 +112,29 @@
           <input id="exerciseName" type="text" placeholder="Es. Hip Thrust" maxlength="60" required />
         </label>
 
-        <div class="field-grid three">
-          <label>
-            Kg
-            <input id="exerciseKg" type="number" min="0" step="0.5" value="0" required />
-          </label>
+        <label>
+          Gruppo muscolare
+          <select id="exerciseGroup" required></select>
+        </label>
+
+        <div class="field-grid two">
           <label>
             Serie
             <input id="exerciseSets" type="number" min="1" step="1" value="1" required />
           </label>
           <label>
             Ripetizioni
-            <input id="exerciseReps" type="number" min="1" step="1" value="1" required />
+            <input id="exerciseReps" type="text" placeholder="Es. 6-8" maxlength="20" required />
           </label>
         </div>
 
         <label>
-          Note <span class="optional">(facoltative)</span>
-          <textarea id="exerciseNotes" rows="3" placeholder="Es. ultima serie a cedimento"></textarea>
-        </label>
-
-        <label class="history-check">
-          <input id="saveToHistory" type="checkbox" checked />
-          <span>Salva la modifica nello storico</span>
+          Note <span class="optional">(pesi, sensazioni, varianti)</span>
+          <textarea id="exerciseNotes" rows="3" placeholder="Es. 60kg x2, poi 65kg a cedimento"></textarea>
         </label>
 
         <button class="primary-button" type="submit">Salva esercizio</button>
       </form>
-    </div>
-  </div>
-
-  <div id="historyModal" class="modal hidden">
-    <div class="modal-backdrop" data-close-history></div>
-    <div class="modal-sheet history-sheet">
-      <button class="modal-close" data-close-history>×</button>
-      <p class="eyebrow">Andamento</p>
-      <h2 id="historyTitle">Storico esercizio</h2>
-      <canvas id="historyChart" width="680" height="250"></canvas>
-      <div id="historyEntries" class="history-entries"></div>
     </div>
   </div>
 
@@ -153,6 +152,6 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>

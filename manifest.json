@@ -1,11 +1,11 @@
 {
   "name": "Gym Progress",
   "short_name": "Gym Progress",
-  "description": "Tracker personale per schede e carichi in palestra.",
+  "description": "Tracker personale per schede e allenamenti in palestra.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f6f6f4",
-  "theme_color": "#f6f6f4",
+  "background_color": "#f4f6f5",
+  "theme_color": "#f4f6f5",
   "icons": [
     {
       "src": "icon.svg",
