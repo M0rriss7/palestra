@@ -147,6 +147,7 @@ function renderHome() {
   $("totalExercises").textContent = SCHEDA_IDS.reduce((sum, id) => sum + state.schede[id].exercises.length, 0);
   $("totalSessions").textContent = SCHEDA_IDS.reduce((sum, id) => sum + state.schede[id].sessions.length, 0);
   $("totalGroups").textContent = countActiveGroups();
+  if (typeof updateDietEntryCard === "function") updateDietEntryCard();
 }
 
 function countActiveGroups() {
@@ -161,6 +162,7 @@ function openDay(dayId) {
   currentDayId = dayId;
   homeView.classList.remove("active");
   groupsView.classList.remove("active");
+  if (typeof dietView !== "undefined") dietView.classList.remove("active");
   dayView.classList.add("active");
   $("currentDayTitle").textContent = currentDay().label;
   $("currentDayDate").textContent = "Scheda";
@@ -171,6 +173,7 @@ function openDay(dayId) {
 function openGroups() {
   homeView.classList.remove("active");
   dayView.classList.remove("active");
+  if (typeof dietView !== "undefined") dietView.classList.remove("active");
   groupsView.classList.add("active");
   renderGroups();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -202,6 +205,7 @@ function showHome() {
   currentDayId = null;
   dayView.classList.remove("active");
   groupsView.classList.remove("active");
+  if (typeof dietView !== "undefined") dietView.classList.remove("active");
   homeView.classList.add("active");
   renderHome();
   window.scrollTo({ top: 0, behavior: "smooth" });

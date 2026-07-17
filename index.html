@@ -10,7 +10,7 @@
   <title>Gym Progress</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="icon.svg" />
-  <link rel="stylesheet" href="style.css?v=21" />
+  <link rel="stylesheet" href="style.css?v=22" />
 </head>
 <body>
   <main class="app-shell">
@@ -37,6 +37,15 @@
       </div>
 
       <div id="dayGrid" class="day-grid"></div>
+
+      <button id="dietBtn" class="diet-entry-card">
+        <span class="diet-entry-icon">🍽</span>
+        <span class="diet-entry-text">
+          <strong>Dieta</strong>
+          <span id="dietEntryStatus">Nessun file caricato</span>
+        </span>
+        <span class="diet-entry-arrow">›</span>
+      </button>
 
       <section class="summary-card">
         <div>
@@ -97,6 +106,51 @@
       <p class="groups-hint">Numero di esercizi per gruppo, sommando tutte le schede.</p>
       <div id="groupsList" class="groups-list"></div>
     </section>
+
+    <section id="dietView" class="view">
+      <div class="day-header">
+        <button id="dietBackBtn" class="back-button">‹</button>
+        <div class="day-title-wrap">
+          <p class="eyebrow">Schema alimentare</p>
+          <h2>Dieta</h2>
+        </div>
+      </div>
+
+      <div id="dietUpload" class="diet-upload">
+        <div class="empty-icon">🍽</div>
+        <h3>Nessuna dieta caricata</h3>
+        <p>Carica il PDF del tuo schema alimentare: viene letto direttamente sul telefono, senza inviarlo da nessuna parte.</p>
+        <label class="primary-button diet-upload-btn" for="dietFileInput">Carica dieta (PDF)</label>
+        <input type="file" id="dietFileInput" accept="application/pdf" class="visually-hidden" />
+        <p id="dietUploadError" class="diet-error hidden"></p>
+      </div>
+
+      <div id="dietContent" class="diet-content hidden">
+        <div class="diet-toolbar">
+          <span id="dietFileName" class="diet-filename"></span>
+          <button id="dietResetBtn" class="action-button danger">Resetta dieta</button>
+        </div>
+
+        <nav id="dietToc" class="diet-toc"></nav>
+
+        <section class="diet-block">
+          <p class="eyebrow">Esempio</p>
+          <h3>Giornata tipo</h3>
+          <div id="dietDay" class="diet-day"></div>
+        </section>
+
+        <section class="diet-block">
+          <p class="eyebrow">Da consultare</p>
+          <h3>Sostituzioni</h3>
+          <div id="dietSubs" class="diet-subs"></div>
+        </section>
+
+        <details class="diet-raw">
+          <summary>Testo originale estratto dal PDF</summary>
+          <pre id="dietRawText"></pre>
+        </details>
+      </div>
+    </section>
   </main>
 
   <div id="exerciseModal" class="modal hidden">
@@ -152,6 +206,8 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="diet.js?v=22"></script>
 </body>
 </html>
