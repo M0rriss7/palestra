@@ -3,11 +3,11 @@ const DIET_STORAGE_KEY = "gym-progress-diet-v1";
 const DIET_MEAL_HEADERS = ["Colazione", "Pranzo", "Spuntino", "Cena", "Post cena"];
 
 const DIET_SUB_CATEGORIES = [
-  { key: "primo", match: /^Primo piatto/i, label: "Primo piatto" },
-  { key: "secondo", match: /^Secondo piatto/i, label: "Secondo piatto" },
-  { key: "contorno", match: /^Contorno/i, label: "Contorno" },
-  { key: "condimento", match: /^Condimento/i, label: "Condimento" },
-  { key: "frutta", match: /^Frutta/i, label: "Frutta" }
+  { key: "primo", match: /^Primo piatto/i, label: "PRIMO" },
+  { key: "secondo", match: /^Secondo piatto/i, label: "SECONDO" },
+  { key: "contorno", match: /^Contorno/i, label: "CONTORNO" },
+  { key: "condimento", match: /^Condimento/i, label: "CONDIMENTO" },
+  { key: "frutta", match: /^Frutta/i, label: "FRUTTA" }
 ];
 
 const dietView = document.getElementById("dietView");
@@ -223,8 +223,8 @@ function parseTotale(line) {
 
 function parseSostituzioni(lines) {
   const result = {
-    colazioneDolce: { label: "Colazione dolce", items: [] },
-    colazioneSalata: { label: "Colazione salata", items: [] },
+    colazioneDolce: { label: "COLAZIONE DOLCE", items: [] },
+    colazioneSalata: { label: "COLAZIONE SALATA (max 4 volte)", items: [] },
     pranzoCena: {
       label: "Pranzo e Cena",
       sub: Object.fromEntries(DIET_SUB_CATEGORIES.map(c => [c.key, { label: c.label, items: [] }]))
@@ -235,6 +235,7 @@ function parseSostituzioni(lines) {
   let currentTop = null;
   let currentSub = null;
   let lastItemRef = null;
+  let awaitingFirstBullet = false;
 
   lines.forEach(rawLine => {
     const line = cleanLine(rawLine);
@@ -243,21 +244,22 @@ function parseSostituzioni(lines) {
     if (/^Colazione dolce/i.test(line)) {
       currentTop = "colazioneDolce";
       currentSub = null;
-      result.colazioneDolce.label = line;
       lastItemRef = null;
+      awaitingFirstBullet = true;
       return;
     }
     if (/^Colazione salata/i.test(line)) {
       currentTop = "colazioneSalata";
       currentSub = null;
-      result.colazioneSalata.label = line;
       lastItemRef = null;
+      awaitingFirstBullet = true;
       return;
     }
     if (/^Pranzo\/?Cena|^Pranzo\s*\/\s*Cena/i.test(line)) {
       currentTop = "pranzoCena";
       currentSub = null;
       lastItemRef = null;
+      awaitingFirstBullet = true;
       return;
     }
 
@@ -265,8 +267,8 @@ function parseSostituzioni(lines) {
       const subMatch = DIET_SUB_CATEGORIES.find(c => c.match.test(line));
       if (subMatch) {
         currentSub = subMatch.key;
-        result.pranzoCena.sub[currentSub].label = line;
         lastItemRef = null;
+        awaitingFirstBullet = true;
         return;
       }
     }
@@ -277,20 +279,19 @@ function parseSostituzioni(lines) {
       if (target) {
         target.items.push(text);
         lastItemRef = target.items;
+        awaitingFirstBullet = false;
       }
       return;
     }
 
+    // Riga senza trattino: se stiamo ancora aspettando il primo elenco della
+    // categoria, è testo descrittivo del titolo (es. note tra parentesi) e va
+    // ignorato, per non trasformarlo in una voce fasulla.
+    if (awaitingFirstBullet) return;
+
+    // Altrimenti è la prosecuzione a capo dell'ultima voce puntata.
     if (lastItemRef && lastItemRef.length) {
       lastItemRef[lastItemRef.length - 1] = cleanLine(lastItemRef[lastItemRef.length - 1] + " " + line);
-      return;
-    }
-
-    if (currentTop) {
-      const target = getBucket(result, currentTop, currentSub);
-      if (target) target.items.push(line);
-    } else {
-      result.altro.items.push(line);
     }
   });
 
